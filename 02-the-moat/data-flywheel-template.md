@@ -1,18 +1,55 @@
 # Data Flywheel Map
 
-> **Purpose.** Engineer the moat. Module 1's diagnostic asks *"is the data axis defensible?"*; this doc asks *"what does the loop that creates that defensibility actually look like, where is it weakest, and how does it get stronger over time?"*
->
-> A data flywheel is four loops chained end-to-end: usage produces signal, signal improves the system, the better system produces a better experience, the better experience drives more usage. The flywheel is only as strong as its weakest link — diagnose the weakest loop, and you have your roadmap.
+> **Purpose.** Engineer the moat. Module 1's diagnostic asks *"is the data axis defensible?"*; this doc asks *"by what specific compounding mechanisms does that defensibility get built, where is the engine weakest, and how does it get stronger over time?"*
 >
 > **How to use it.** Score honestly at month 0. Re-score at every quarterly review. A flywheel that does not move is decaying — even if the score has not yet fallen.
 
 ---
 
+## What is a data flywheel?
+
+A data flywheel is a self-reinforcing loop in which using the product produces signal, the signal makes the system better, the better system produces better outputs, and the better outputs drive more usage — which produces more signal. Each turn of the loop adds energy. The longer the wheel spins, the harder it is for a competitor starting from zero to catch up.
+
+```
+                Users interact
+                      │
+                      ▼
+                Capture signal
+                      │
+                      ▼
+                System improves
+                      │
+                      ▼
+                Better outputs
+                      │
+                      ▼
+                  More usage  ──┐
+                      │         │
+                      └─────────┘
+```
+
+A static dataset is not a flywheel. A flywheel requires *all four arrows to be live*. If any one of them breaks, the wheel stalls — and the moat decays.
+
+But a flywheel needs a *substrate to compound on*. Generic logs don't compound; specific kinds of data do. We score the four substrates that build durable AI moats.
+
+---
+
+## The four compounding mechanisms
+
+| Mechanism | What it measures |
+|---|---|
+| **Correction** | Do users fix AI outputs? Is that signal captured and reused? |
+| **Preference** | Does the product learn individual or team preferences over time? |
+| **Domain context** | Does usage in one area improve quality in adjacent areas? |
+| **Network** | Does each new user make the product better for everyone? |
+
+Score each 1–5. **The weakest loop is where competitors attack** — it is the part of your moat that is not yet compounding.
+
+---
+
 ## Timeframe
 
-**Operational — 12 to 24 months.** Unlike the structural diagnostic, this is a build plan: what loops exist now, what loops we are constructing, what the system looks like when it works.
-
-For each loop we record the **score today**, plus the **trajectory at month 12 and month 24** under the current plan. A flywheel that scores 4/20 today and 14/20 in 18 months is a *plan*; one that stays at 4/20 indefinitely is a wrapper.
+**Operational — 12 to 24 months.** This is a build plan: what compounds today, what we are constructing, what the system looks like when it works. Each loop is scored **today**, with **trajectory at M12 and M24** under the current plan. A flywheel that scores 4/20 today and 14/20 in 18 months is a *plan*; one that stays at 4/20 indefinitely is a wrapper.
 
 ---
 
@@ -20,7 +57,7 @@ For each loop we record the **score today**, plus the **trajectory at month 12 a
 
 This document is where Axis 2 of the diagnostic gets engineered. If the diagnostic says Axis 2 is the lever to pull, the flywheel score is what tells us we are pulling it. The two should track together — Axis 2 cannot move without the flywheel total moving.
 
-> **Diagnostic reference:** Axis 2 (Data) — current score __ / 5. Target at month 24: __ / 5. The flywheel total below should grow in step.
+> **Diagnostic reference:** Axis 2 (Data) — current __ / 5. Target M24: __ / 5. The flywheel total below should grow in step.
 
 ---
 
@@ -36,21 +73,21 @@ Every loop requires:
 
 ---
 
-### Loop 1 — Usage → Signal
+### Loop 1 — Correction
 
-**The question.** Do users produce a structured signal we can capture, beyond raw logs?
+**The question.** Do users fix AI outputs? Is that signal captured and reused to improve the system?
 
-**Why it matters.** No signal means nothing to compound on. A flywheel cannot spin without input.
+**Why it matters.** Corrections are the highest-quality signal a product can collect — the user has shown you exactly what was wrong and what would have been right. A correction loop is what turns a static system into a learning one.
 
 **Rubric.**
 
 | Score | Descriptor | What it looks like |
 |---|---|---|
-| 1 | **Logs only** | No structured proprietary signal. Raw request/response logs at most. |
-| 2 | **Sparse signal** | Some structured signal collected (ratings, completions, click-through) but shallow and inconsistent. |
-| 3 | **Reliable signal** | Specific signal per interaction — corrections, action outcomes, structured ratings — captured reliably across a defined set of touchpoints. |
-| 4 | **Rich signal** | Multiple signal types (text + behavioural + outcome) at meaningful volume, structured for downstream use. |
-| 5 | **Proprietary by design** | Signal that no third party can collect — private context, regulated data, in-the-loop user corrections — captured in a form that directly drives improvement. |
+| 1 | **No capture** | No mechanism for users to flag or fix outputs. Wrong answers are invisible. |
+| 2 | **Captured, unused** | Feedback widget exists; signal sits in a database with no consumer. |
+| 3 | **Manual cadence** | Corrections drive periodic manual updates (KB edits, prompt tweaks, retrieval rule changes) on a defined cadence. |
+| 4 | **Instrumented pipeline** | Corrections feed a structured improvement loop (evals, retrieval refresh, fine-tune cycle) running automatically on a regular schedule. |
+| 5 | **Automated retraining** | Corrections directly train or tune the model in production. The system measurably improves with every batch, no human in the loop. |
 
 **Score: __/5**
 **Rationale:**
@@ -60,21 +97,21 @@ Every loop requires:
 
 ---
 
-### Loop 2 — Signal → Model / System
+### Loop 2 — Preference
 
-**The question.** Does that signal actually improve the model or system, on a defined cadence?
+**The question.** Does the product learn individual or team preferences over time, and does that learning shape future outputs in a way the user feels?
 
-**Why it matters.** Signal that sits in a database is not a flywheel. The loop only spins if signal → improvement is wired up.
+**Why it matters.** A product that knows you is a product that is hard to leave. Preference is where the moat moves from "the product is good" to "the product is good *for me specifically*."
 
 **Rubric.**
 
 | Score | Descriptor | What it looks like |
 |---|---|---|
-| 1 | **Inert** | Signal is collected but not used. No improvement mechanism exists. |
-| 2 | **Manual ad-hoc** | Signal drives occasional manual updates (KB edits, prompt tweaks). No cadence. |
-| 3 | **Defined cadence** | Signal feeds a structured improvement process (evals, retrieval refresh, fine-tune cycle) on a known cadence. |
-| 4 | **Instrumented pipeline** | Improvement runs automatically. New signal produces a measurable system delta within days. |
-| 5 | **Live training** | Signal directly trains/tunes the model in production. The system measurably improves with every batch, no human in the loop required. |
+| 1 | **Stateless** | No memory between sessions. Every user gets the same product. |
+| 2 | **Surface profile** | Basic profile fields stored (name, address) but they don't meaningfully shape outputs. |
+| 3 | **Stated preference** | The product remembers preferences the user has explicitly set ("prefer short answers", "vegetarian"), and applies them. |
+| 4 | **Behavioural inference** | The product infers preferences from behaviour and adapts proactively. The user notices the system getting more aligned. |
+| 5 | **Deep personalization** | Every user gets a meaningfully different product. Personalization is itself a primary differentiator and a switching cost. |
 
 **Score: __/5**
 **Rationale:**
@@ -84,21 +121,21 @@ Every loop requires:
 
 ---
 
-### Loop 3 — Model / System → Experience
+### Loop 3 — Domain context
 
-**The question.** Does a better system produce a noticeably better user experience?
+**The question.** Does usage in one area of the product improve quality in adjacent areas? Does signal cross-pollinate, or does each domain stand alone?
 
-**Why it matters.** A model that improves silently does nothing for retention. The improvement has to land where the user can feel it.
+**Why it matters.** Cross-domain transfer is what turns a multi-product into a *system*. A generalist competitor can replicate any single domain; the competitive defense is that *all of them together* form a context no individual domain could produce alone.
 
 **Rubric.**
 
 | Score | Descriptor | What it looks like |
 |---|---|---|
-| 1 | **Invisible** | Improvements don't translate into user-visible quality. Internal-only metric movement. |
-| 2 | **Subtle** | Improvements show up only to power users or only on edge cases. Most users would not notice. |
-| 3 | **Felt** | Better system produces noticeably better answers on real tasks. A returning user would describe the product as having "got smarter." |
-| 4 | **Capability-unlocking** | Improvements unlock new capabilities or new use cases not previously possible. |
-| 5 | **Primary differentiator** | The system's quality is the primary reason users return. Strip it out and the product no longer has a reason to exist. |
+| 1 | **Siloed** | Each domain is an island. Improvements don't transfer. The product is a bundle of disconnected features. |
+| 2 | **Shared stack** | Common infrastructure but no cross-pollination of signal between domains. |
+| 3 | **Adjacent transfer** | Improvements in one domain (e.g. waste pickup) measurably inform adjacent ones (e.g. recycling guidance). |
+| 4 | **Multi-domain compounding** | Signal from any one domain improves quality across multiple others. The product is meaningfully more than the sum of its features. |
+| 5 | **Cross-domain transfer** | The product's quality in any domain depends on signal from all others. Domains are mutually reinforcing — and that interdependency is itself the moat. |
 
 **Score: __/5**
 **Rationale:**
@@ -108,21 +145,21 @@ Every loop requires:
 
 ---
 
-### Loop 4 — Experience → Usage
+### Loop 4 — Network
 
-**The question.** Does better UX drive more / returning usage?
+**The question.** Does each new user make the product better for *everyone*? Or do users sit in isolation?
 
-**Why it matters.** This is what closes the loop. Without it, you have a product that gets better but doesn't grow — a hobby, not a flywheel.
+**Why it matters.** A network effect is the strongest moat there is — value compounds across the user base, not just within an individual account. But it is also the rarest, and most products that claim network effects actually have something else (usually Correction at scale, relabelled).
 
 **Rubric.**
 
 | Score | Descriptor | What it looks like |
 |---|---|---|
-| 1 | **No retention** | Users try and leave. Cohort curves go to zero. |
-| 2 | **Curiosity-driven** | Some return usage, mostly novelty-driven. No defined value-moment for return. |
-| 3 | **Recurring value** | Recurring usage tied to specific value moments. Users come back for defined jobs. |
-| 4 | **Compounding** | Usage compounds over time. Users use the product more as they accumulate context. They refer others. |
-| 5 | **Network effects** | Value to one user increases as more users use the product. Self-reinforcing growth. |
+| 1 | **Isolated** | Users do not benefit each other in any way. The product is one-to-one. |
+| 2 | **Aggregate visibility** | Basic shared statistics visible ("popular this week") but no real value transfer between users. |
+| 3 | **Indirect benefit** | More users → more corrections / contributions / data → better product for everyone. (Note: this is mostly Correction at scale, not a true network effect.) |
+| 4 | **Direct user-to-user value** | Explicit value flows between users — shared content, collective recommendations, community Q&A surfaced inside the product. |
+| 5 | **Strong network effects** | Value to any one user increases meaningfully as more users join. The product would not work with a small user base; it gets better as it grows. |
 
 **Score: __/5**
 **Rationale:**
@@ -136,13 +173,13 @@ Every loop requires:
 
 **Total flywheel score: __/20** *(now)* · **__/20** *(M12 target)* · **__/20** *(M24 target)*
 
-**Weakest loop.** *(name the loop, not the score)*
+**Weakest loop.** *(Name the loop, not the score. The weakest loop is where competitors attack.)*
 
-**Bottleneck logic.** *(in one paragraph: why is this the weakest, and what flow-on effect does it have on the other loops? A weak Loop 1 starves everything downstream; a weak Loop 4 means the system gets better for nobody.)*
+**Bottleneck logic.** *(In one paragraph: why is this the weakest, and what flow-on effect does it have on the others? A weak Correction loop starves the system of improvement signal; a weak Network loop caps how much the moat can compound; a weak Preference loop means switching cost stays low; a weak Domain Context loop means each feature has to defend itself alone.)*
 
-**Fix for the weakest loop.** *(the one specific operational move that addresses it — not "we'll work on it," but "we will instrument X by date Y, measured by Z.")*
+**Fix for the weakest loop.** *(The one specific operational move that addresses it — not "we'll work on it," but "we will instrument X by date Y, measured by Z.")*
 
-**The honest read.** *(In one paragraph: is this a flywheel, or a curated dataset with marketing? A real flywheel must show movement on every quarterly re-score. If two consecutive quarters pass without movement, the flywheel isn't real — re-evaluate the loop design.)*
+**The honest read.** *(In one paragraph: is this a flywheel, or a curated dataset with marketing? A real flywheel must show movement on every quarterly re-score. If two consecutive quarters pass without movement, the flywheel isn't real — re-evaluate the loop design. Also be honest about which loops are *structurally capped* by your product values or market shape — some products will never have a 5 on Network, and that is fine if the other loops carry.)*
 
 ---
 
@@ -157,6 +194,7 @@ Most positioning maps fail because the team picks axes that flatter them. Pick t
 | **Specialization × Trust** *(vertical–horizontal × verified–probabilistic)* | When the product's value is "we are deeper than a generalist" or "we are more reliable than a chatbot." |
 | **Geography × Action depth** *(local–global × informational–agentic)* | When local presence and ability to take action are the primary differentiators. |
 | **Sovereignty × Generality** *(sovereign–global × focused–broad)* | When data residency and regulatory posture matter. |
+| **Sovereignty × Agency** *(sovereign–global × informational–agentic)* | When sovereignty AND multi-domain action depth are jointly the moat. |
 | **Speed × Depth** *(real-time–batch × workflow–answer)* | When the product competes on response latency and integration depth. |
 
 **Selected axes.**
