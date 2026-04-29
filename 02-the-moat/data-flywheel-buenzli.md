@@ -178,37 +178,101 @@ At the M24 position, Bünzli beats global generalists (ChatGPT, Gemini) for Swis
 
 ---
 
-## 90-day encroachment plan
+## 90-day encroachment plan — three attack vectors
 
-**Named attacker.**
-**Stadt Zürich or Kanton Zürich procures an official civic AI assistant** ("Züri-Bot" or similar), most likely via the Apertus team or a Swiss systems integrator. Launches as a public initiative on `zurich.ch`. This is Attacker D from the diagnostic — and the most concrete near-term threat because it weaponises both the sovereignty advantage (which we share with them) and the official-trust + tax-funded distribution we cannot match.
+A single named attacker creates blind spots. Bünzli is plausibly attackable from three different angles with three different shapes — a hyperscaler with model quality and pre-installation, a focused vertical startup with deeper data than ours, and a Swiss incumbent with massive distribution who adds AI as "one more thing." Each requires its own response, and the structural defence (partnering with Stadt Zürich) addresses several of them simultaneously.
 
-**Attack timeline.**
-- **Days 1–30:** Announcement at a digital-Switzerland conference, coordinated press from Stadt/Kanton communications, early influencer pickup (Tages-Anzeiger, NZZ, SRF).
-- **Days 31–60:** GA on `zurich.ch`, integrated with the most-used civic services (eUmzug, Steueramt, Züri wie neu, ERZ).
-- **Days 61–90:** Integration into the official city app and possibly the SwissID flow; default-status entrenchment for civic queries among less-engaged users.
+---
+
+### Vector 1 — Platform
+
+**Named attacker.** **Apple Intelligence ships Swiss German + a SiriKit-style local-services framework** that municipalities (or a Swiss aggregator like Apertus or local.ch) can register against. Within 24 months is plausible; within 12 months is possible but unlikely.
+
+**Their move.** Native on-device assistant in Swiss German, integrated with Maps, Calendar, Mail, Shortcuts, and a local-services plug-in framework. Default-status for everything Bünzli does today, available to every iPhone user in CH at zero install friction.
+
+**Their leverage.** Pre-installation on ~50%+ of Swiss smartphones. Privacy story (on-device) that *competes directly with* Bünzli's sovereignty axis — the only hyperscaler that can credibly claim it. Apple doesn't need to monetise the feature; it sells hardware.
 
 **Tripwire.**
-- Any public RFP from Stadt or Kanton Zürich for a "civic AI assistant," "intelligente Bürgerservice-Plattform," or similar.
-- An Apertus-team or Swiss-AI-lab announcement of a deployed government Bürger-Bot.
-- Job postings from a city or canton for a "Conversational AI Product Owner" or equivalent.
+- WWDC announcement of Swiss German support or Switzerland-specific Apple Intelligence rollout.
+- SiriKit framework for civic services or local-government plug-ins.
+- Rumour of an Apple ↔ Stadt Zürich or Apple ↔ SBB partnership.
+- Apple Maps adding Zürich-specific civic data layers.
 
-The first of these is the actionable signal — by the time GA is public, the response window is half-spent.
+*Also-watch: OpenAI ships a Swiss-German fine-tune with civic plug-ins. Less existentially dangerous (no on-device privacy story) but more likely within 12 months.*
 
-**Response by horizon.**
+---
 
-| Horizon | Move |
-|---|---|
-| **Week 1 — reactive** | Sharpen the public message: *Bünzli isch d'Stadt UND dini Lebe drum ume.* Re-emphasise the breadth — civic AND commercial AND household — and the multi-domain agentic chains. The official is civic-only; we are the broader Zürich assistant. Publish the positioning publicly within 7 days. |
-| **Month 1 — product** | Ship one multi-domain agentic chain the official structurally cannot — for example: file a Züri wie neu pothole report → add a calendar reminder for the typical resolution timeline → suggest a ZVV reroute around the affected street for the next two weeks. Cross-domain orchestration in one user flow. Doesn't need to be pretty — needs to be real. |
-| **Quarter 1 — structural** | Pre-empt the RFP. Open a formal partnership conversation with Stadt or Kanton Zürich *before* the procurement timeline closes — position Bünzli as the procured supplier or formal complementary partner, not the competitor. Partner-don't-compete. If the conversation succeeds, the attack becomes the win condition. |
+### Vector 2 — Vertical competitor
 
-**The honest read.**
-Two outcomes if the attack lands and we execute:
-1. **Bünzli holds at smaller scope** as the broader-than-civic Zürich assistant — civic users default to the official, but commercial + household + multi-domain agency stay uniquely ours. Scope shrinks; moat survives.
-2. **Bünzli becomes the supplier or formal partner** — the city's official is, in fact, Bünzli (or built on Bünzli's stack). Attack becomes win condition.
+**Named attacker.** **Tsüri.ch ships "Tsüri-Bot"** — an AI assistant on top of seven years of curated, hyper-local Zürich journalism, community engagement, and Quartier-level reporting. Could happen as a product evolution, an acquisition by a media group, or via a small dedicated team.
 
-Survive at full scale only if outcome (2) lands. That is why the Quarter-1 structural move (the partnership track) is the most important of the three horizons — it converts a defensive plan into an offensive one. **The structural play is the plan.**
+**Their move.** A chat assistant grounded in Tsüri.ch's content archive, plus their existing community-contribution muscle. Could plausibly include event listings, neighbourhood-specific stories, recommendations, and editorial answers about Zürich life.
+
+**Data they have that we don't.**
+- **7+ years of editorial Quartier content**, written by Zürich journalists for Zürich readers — exactly the curation-quality bar we are aiming for.
+- **A real community engagement track record** — comments, story corrections, reader tips, story requests. The community-correction loop we are building, they have already been operating (in journalistic form) for years.
+- **Trust with the young / progressive demographic in Zürich** — the early-adopter slice we most want.
+- **A network of local contributors**: journalists, photographers, neighbourhood sources.
+
+This is the honest answer to "what data do they have that you don't" — content depth, community trust, and editorial taste, all accumulated over years that we cannot compress.
+
+**Tripwire.**
+- Tsüri.ch hires an AI engineer or ML lead.
+- A funding round for Tsüri.ch with AI in the wording.
+- Product announcement of a chat / search interface, even an MVP.
+- Partnership announcements with Apertus or a Swiss AI lab.
+
+*Also-watch: a new Zürich-focused civic-tech startup we don't know about yet. Watch the Swiss startup-scene news, Pioneer's portfolio, F10 cohorts.*
+
+---
+
+### Vector 3 — Adjacent expansion
+
+**Named attacker.** **Swisscom bundles a Swiss-aware AI assistant into Blue or My Swisscom** — possibly co-branded with Apertus or built on a Swisscom-developed stack.
+
+**Their move.** AI assistant pre-installed inside Blue (their TV / streaming app) and surfaced in My Swisscom (the customer portal) and the Swisscom mobile app. Likely focused on telco support first, then expanded to cover Swiss services more broadly. Probably free for Swisscom customers, possibly bundled as a premium feature.
+
+**Their distribution advantage.**
+- **~5M Swiss customers** with active Swisscom relationships — meaningful overlap with Bünzli's addressable market.
+- **Pre-installed mobile presence** through Blue, the Swisscom app, and the SwissID-equivalent identity layer they already operate.
+- **Trust as Swiss infrastructure** — Swisscom is one of the few brands with sovereignty credibility comparable to ours.
+- **Capital and BD muscle** to do the Tier-3 partnerships we are pursuing — they could close a Stadt Zürich civic AI deal faster than we could.
+
+This is the most-likely-to-happen-within-24-months vector: Swisscom has explicitly been building AI offerings, and adding a consumer assistant on top of existing distribution is a natural product move.
+
+**Tripwire.**
+- Swisscom AI division announcement of a consumer-facing assistant.
+- Blue update notes mentioning a chat or AI feature.
+- Swisscom + Stadt Zürich partnership news (this would address several attackers' moves at once).
+- Swisscom hiring "Conversational AI" PM/eng roles publicly.
+
+*Also-watch: 20min adds AI to its app (massive daily reach via news distribution); local.ch + Salt do similar in the directory + telco intersection.*
+
+---
+
+### Response by horizon
+
+| Horizon | vs Platform *(Apple)* | vs Vertical *(Tsüri.ch)* | vs Adjacent *(Swisscom)* |
+|---|---|---|---|
+| **Week 1 — reactive** | Public messaging: *Apple isch für d'Schnell-Frag, Bünzli macht d'Arbet für di.* Apple covers casual queries; Bünzli covers multi-domain *action*. Sharpen the action-vs-info distinction publicly within 7 days. | Public messaging: *Tsüri.ch verzellt, Bünzli macht.* Their strength is content and editorial; ours is action-taking and personal civic graph. Position as complementary, not competitive. | Public messaging: *Sicher, Schwiizerisch, und unabhängig.* Bünzli is not bundled into a telco — works for any Swisscom, Salt, or Sunrise customer; users keep their data and their assistant decoupled. |
+| **Month 1 — product** | Ship one multi-domain agentic chain Apple structurally cannot easily do natively: e.g. file Züri wie neu → calendar reminder for resolution → ZVV reroute suggestion. Real cross-domain orchestration in one user flow. | Open a content-partnership track: integrate Tsüri.ch RSS / public archive into Bünzli's KB with attribution and a click-through. Convert their content lead into our distribution by becoming a friendly upstream surface. If they refuse, ship a clear editorial-quality demo that proves we close the gap. | Ship a sovereignty-and-portability proof: explicit "your data is here, export it now, delete it now" UI. Make the *independence* angle a feature Swisscom structurally can't replicate inside their own walled experience. |
+| **Quarter 1 — structural** | **Lock in Tier-3 partnerships Apple cannot easily replicate** — SwissID integration, Stadt Zürich civic-data depth, Tagesschule pilot. The structural move is *exclusivity-by-locality*: become the assistant whose civic depth lives in places Apple cannot economically build for. | Acquire, partner, or out-execute. Best move with a sympathetic vertical competitor is often *partnership* (us as the action layer, them as the editorial layer). If they go independent, out-execute on action depth — content alone isn't a moat once we have a correction flywheel running. | **Pre-empt by becoming the procured supplier.** Open a formal partnership conversation with Stadt or Kanton Zürich *before* Swisscom or any other adjacent gets there. Same partner-don't-compete play we discussed against the public-sector Attacker D — and it addresses Vectors 1 and 3 simultaneously. |
+
+The Quarter-1 row's third cell is the highest-leverage move on this entire plan: **a Stadt/Kanton Zürich partnership addresses Platform (lock in distribution Apple can't replicate), Vertical (city deal beats Tsüri.ch's content), AND Adjacent (city deal beats Swisscom's distribution).** It is the single structural play that addresses all three vectors at once. Everything else is reactive.
+
+---
+
+### The honest read
+
+**Most urgent.** Vertical (Tsüri.ch). Most under-estimated, easiest to launch quietly, and structurally has the data we are still trying to build. The other two vectors are louder but slower.
+
+**Where do we survive intact?** Only if the Quarter-1 Stadt/Kanton Zürich partnership lands. With it, all three vectors have a credible counter — Bünzli is the city's procured assistant, has Tier-3 partnerships locked in, and a Swisscom or Apple offering becomes a complement (or a downstream client) rather than a replacement.
+
+**Where do we survive smaller?** If the partnership doesn't land but the Month-1 product moves do, Bünzli holds at reduced scope as the *broader-than-civic, broader-than-content, independent-of-telco* Zürich assistant. The committed-user segment stays; the casual segment is lost to whichever attacker reaches them first. Scope shrinks; moat survives.
+
+**Where do we not survive at all?** If Apple ships Swiss German + on-device civic services *and* Swisscom bundles a comparable assistant into Blue *and* Tsüri.ch ships an editorial AI — all within 12 months — and we have not landed the Stadt Zürich partnership, the niche collapses. This is the catastrophic scenario the diagnostic flagged as the Top Vulnerability, now made explicit at vector level. Unlikely but not negligible.
+
+**The single structural move.** The Quarter-1 Stadt/Kanton Zürich partnership is not just an answer to one attacker — it is the keystone defence against all three. Treat it as the most important non-product piece of work in the next 12 months. It is mostly BD and partnerships, not engineering — and that is the work we have not yet started.
 
 ---
 
@@ -217,3 +281,4 @@ Survive at full scale only if outcome (2) lands. That is why the Quarter-1 struc
 | Date | Reviewer | What changed |
 |---|---|---|
 | 2026-04-29 | Benedict + Claude (Opus 4.7) | Initial fill against the four course loops (Correction, Preference, Domain context, Network). Honest naming of structural caps on Preference (values) and Network (product shape). Sovereignty × Agency selected as the positioning axes. Stadt Zürich named as the most concrete near-term attacker; partner-don't-compete framed as the structural response. |
+| 2026-04-29 | Benedict + Claude (Opus 4.7) | Encroachment plan restructured into three attack vectors: Platform (Apple Intelligence), Vertical (Tsüri.ch), Adjacent (Swisscom). 3×3 response grid added (week 1 / month 1 / quarter 1 × three vectors). Stadt/Kanton Zürich partnership identified as the single structural move addressing all three vectors at once. Generic template updated to match. |

@@ -221,30 +221,64 @@ We plot the product **twice**: where we are today, and where the moat needs to b
 
 ---
 
-## 90-day encroachment plan
+## 90-day encroachment plan — three attack vectors
 
-The diagnostic asked "could a hyperscaler crush you?" The flywheel asks the operational follow-up: **if a serious attack starts on Monday, what are you doing on Tuesday?**
+The diagnostic asked "could a hyperscaler crush you?" The flywheel asks the operational follow-up: **if serious attacks start on Monday, what are you doing on Tuesday?**
 
-**Named attacker.**
-*(One specific competitor, one specific announced or plausible move. Not "Big Tech" — "OpenAI ships X by Y." If you can't name it specifically, you can't plan against it.)*
+A single named attacker creates blind spots — you plan against the threat you already see and miss the ones with different shapes. Plan against three:
 
-**Attack timeline.**
-- **Days 1–30:** *(announcement, press, influencer adoption)*
-- **Days 31–60:** *(GA shipping, first wave of users defect)*
-- **Days 61–90:** *(integration with adjacent platforms, default-status entrenchment)*
+| Vector | Question to answer | Their characteristic leverage |
+|---|---|---|
+| **Platform** *(hyperscaler / frontier lab / OS)* | If Gemini, Apple, OpenAI, Anthropic, or Microsoft absorb your hero feature into their default surface — what then? | Distribution and model quality. Pre-installed reach. |
+| **Vertical competitor** | Which startup is building the same thing but deeper in one niche? **What data do they have that you don't?** | Domain depth, accumulated specialised data, focused execution. |
+| **Adjacent expansion** | Which company next door could add your feature as "one more thing"? **What's their distribution advantage?** | Existing customer base and product surface — they don't need to acquire users, only to add a feature. |
 
+For each vector: name a specific attacker, name their move, name the leverage they have over you, name the tripwire that tells you it has started. Vague vectors produce vague defence.
+
+---
+
+### Vector 1 — Platform
+
+**Named attacker.** *(Specific company + specific move. Not "Apple" — "Apple Intelligence ships X.")*
+**Their move.**
+**Their leverage.** *(Distribution? Model quality? Default-status? Pre-installation?)*
+**Tripwire.** *(The observable signal that tells you the attack has started.)*
+
+### Vector 2 — Vertical competitor
+
+**Named attacker.** *(A specific startup or focused player going deeper in your niche.)*
+**Their move.**
+**Data they have that you don't.** *(Be honest. If you can't name it, you may be underestimating them.)*
+**Tripwire.** *(Hiring patterns, product announcements, funding round wording, etc.)*
+
+### Vector 3 — Adjacent expansion
+
+**Named attacker.** *(A company next door — adjacent vertical, adjacent product surface, adjacent customer base.)*
+**Their move.** *(How they would bundle your feature into their existing product.)*
+**Their distribution advantage.** *(Specific. "5M existing customers" not "they have customers.")*
 **Tripwire.**
-*(The observable signal that tells you the attack has started. A specific event you would see — not a vibe. Without a tripwire, the plan triggers too late.)*
 
-**Response by horizon.**
+---
 
-| Horizon | Move | Owner | Evidence of completion |
+### Response by horizon
+
+The defence is rarely the same per vector. Each cell is a specific move addressing that vector at that horizon — not a generic placeholder.
+
+| Horizon | vs Platform | vs Vertical | vs Adjacent |
 |---|---|---|---|
-| **Week 1 — reactive** | *(public messaging, customer comms, sharpen the why-we-still-exist sentence)* | | |
-| **Month 1 — product** | *(one feature shipped that anchors the difference — not pretty, but real)* | | |
-| **Quarter 1 — structural** | *(a structural move that changes the competitive ground — partnership, exclusive integration, regulatory positioning, distribution lock)* | | |
+| **Week 1 — reactive** *(messaging, comms, sharpen the why-we-still-exist sentence)* | | | |
+| **Month 1 — product** *(one shipped feature that anchors the difference)* | | | |
+| **Quarter 1 — structural** *(a move that changes the competitive ground — partnership, exclusive integration, regulatory positioning, distribution lock)* | | | |
 
-**The honest read.** *(One paragraph: if the attack lands and the plan executes, do you survive at the same scale, a smaller scale, or as a different product? "Survive at scale" is rare and should be earned in the answer, not assumed.)*
+---
+
+### The honest read
+
+*One paragraph per question:*
+
+- **Which vector is most urgent?** *(Not necessarily the most existential. Vertical is often most under-estimated; Platform is most existential but slowest-moving; Adjacent is highest-likelihood within 24 months.)*
+- **Where do you survive intact, where do you survive smaller, where do you not survive at all?** *(Be honest per vector. "Survive at scale" is rare and should be earned in the answer.)*
+- **Is there a single structural move that addresses multiple vectors at once?** *(If yes, prioritise it. If no, you have three plans, not one.)*
 
 ---
 
