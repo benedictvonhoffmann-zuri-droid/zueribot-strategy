@@ -104,7 +104,7 @@ We score 4 rather than 5 because nothing structurally prevents a hyperscaler —
 
 ---
 
-## Killer memo — three attackers
+## Killer memo — four attackers
 
 ### Attacker A — The hyperscaler / frontier lab
 
@@ -123,6 +123,12 @@ We score 4 rather than 5 because nothing structurally prevents a hyperscaler —
 1. **Attack:** Apple Intelligence ships Swiss German voice and a SiriKit-style local-services framework that municipalities (or Swiss aggregators) register against.
 2. **Wedge:** Free, on-device, pre-installed on every iPhone in Switzerland. Integrates with Maps, Calendar, Mail, Shortcuts.
 3. **Why users switch:** Zero install. For workflows that don't require Bünzli's depth, the OS-native version wins by default.
+
+### Attacker D — The public sector / local government
+
+1. **Attack:** Stadt Zürich, Kanton Zürich, or a federal e-government initiative (potentially via Apertus or a Swiss AI-lab partnership) ships an official "Züri-Bot" on `zurich.ch`, focused on civic services and information. Most likely procured rather than built — meaning the threat is also a partnership opportunity.
+2. **Wedge:** They own the source data — every civic API is theirs to begin with. Automatic legitimacy on civic actions ("the city built this" beats "an independent assistant"). Tax-funded, so free forever. Hosted on official `.zh.ch` / `zurich.ch` domains with built-in trust and visibility.
+3. **Why users switch:** For civic-only use cases the official version is the safest bet. "Why use Bünzli when zurich.ch has its own?" pulls casual civic users away. The defence is twofold: (a) cover ground the public sector won't (commercial bookings, household rhythms, agentic chains across providers), and (b) be the procurement option — partner with the city rather than compete with it.
 
 ---
 
@@ -194,3 +200,4 @@ Axis 3 collapses (a hyperscaler or OS platform ships native Swiss-German + civic
 | 2026-04-27 | Benedict + Claude (Opus 4.7) | Axis 2 demoted 3→2; Axis 1 reframed around hyper-local + community + civic graph (privacy/sovereignty moved to Axis 3); H/M/L legend added. Combined: 10→9. |
 | 2026-04-27 | Benedict + Claude (Opus 4.7) | Axis 1 demoted 3→2 after VC stress-test — switching cost at v1 is annoying not costly. Each axis rewritten to own one primary claim, repetition cut. Synthesis sharpened: bet stated in one sentence, "what kills it" made explicit, "lift one axis per quarter" added as the operating instruction. Combined: 9→8. |
 | 2026-04-27 | Benedict + Claude (Opus 4.7) | Privacy-first added to Axis 1 as user-side values-stickiness claim (mirror of Axis 3's market-side claim). 24-month focus section added: 5 priorities + a single guiding question. |
+| 2026-04-29 | Benedict + Claude (Opus 4.7) | Added Attacker D — public sector / local government (Stadt Zürich / Kanton Zürich / federal e-gov, potentially via Apertus). Defence framed as cover-the-commercial-side + partner-don't-compete. Killer memo retitled to four attackers. Generic template updated with optional fourth archetype for civic / regulated / sovereignty-adjacent products. |

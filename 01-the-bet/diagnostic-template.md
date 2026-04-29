@@ -141,6 +141,13 @@ A single memo flattens the threat picture. Real products are attacked from at le
 2. Wedge:
 3. Why users switch:
 
+### Attacker D — The public sector / local government *(optional — use for civic, regulated, healthcare, education, or sovereignty-adjacent products; skip for pure consumer or B2B with no government overlap)*
+*(A city, canton, national agency, or public-private partnership ships an official AI in your space. Their move: leverage data ownership, automatic trust, and tax funding to ship a free official alternative. Their advantage: they own the source data, they cannot be undercut on price, and they carry legitimacy you cannot match. Their blind spot: slow procurement cycles, risk-aversion on AI, often poor UX, focused on minimum-viable rather than delightful — and frequently they procure rather than build, which means a vendor like you could also be the supplier.)*
+
+1. Attack:
+2. Wedge:
+3. Why users switch:
+
 ---
 
 ## Synthesis
