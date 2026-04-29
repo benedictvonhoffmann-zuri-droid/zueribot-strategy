@@ -165,16 +165,21 @@ Most positioning maps fail because the team picks axes that flatter them. Pick t
 - **Axis Y:**
 - **Why these two:** *(one sentence — what claim does this map make about where you compete?)*
 
-**Map.**
+**Map — current position and target moat.**
+
+We plot the product **twice**: where we are today, and where the moat needs to be in 24 months. The arrow between the two is the strategy. A map with only one dot is a snapshot; a map with two dots is a plan.
 
 | Competitor | X position | Y position | Notes |
 |---|---|---|---|
-| **Your product** | | | *(where you place yourself today, and where you are heading)* |
+| **Your product — today** | | | *(honest read of current position, not aspirational)* |
+| **Your product — target moat (M24)** | | | *(where the moat must be after 24 months of work)* |
 | | | | |
 | | | | |
 | | | | |
 
-**The honest read.** *(One paragraph: what does this position imply? Which competitors do you beat — at the cost of which? Which competitors beat you — and is that intentional?)*
+**The move.** *(One sentence describing the trajectory from today's dot to the M24 dot. What is changing on each axis, and why? "We are moving from X1 to X2 on the X-axis because [reason], and from Y1 to Y2 on the Y-axis because [reason]." If the move can't be stated in one sentence, the strategy is not yet sharp.)*
+
+**The honest read.** *(One paragraph: at the M24 position, which competitors do you beat — at the cost of which? Which competitors beat you — and is that intentional? Is the move from today to M24 ambitious-but-credible, or wishful? Name the operational work that justifies the arrow.)*
 
 ---
 
