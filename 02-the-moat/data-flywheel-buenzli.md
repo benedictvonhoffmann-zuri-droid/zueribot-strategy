@@ -224,6 +224,11 @@ This is the honest answer to "what data do they have that you don't" — content
 
 *Also-watch: a new Zürich-focused civic-tech startup we don't know about yet. Watch the Swiss startup-scene news, Pioneer's portfolio, F10 cohorts.*
 
+**Pre-emptive mitigation — approach them now, not later.**
+The strongest move on this vector is a proactive one, taken *before* either side has shipped or announced anything AI-shaped. An exploratory conversation framed as *"let's see if there's a partnership where Bünzli surfaces Tsüri.ch's journalism with attribution and Tsüri keeps its editorial role"* is a much easier conversation than reacting to their product announcement six months from now. Worst case: we learn what they are thinking and the relationship exists when something does ship. Best case: we are aligned before any product overlap appears, and the vector is neutralised at the relationship level — which is the cheapest possible defence on this map.
+
+This is not a Quarter-1 structural move on the response grid. It is a *now* move — independent of any tripwire — and the cost of doing it is one coffee.
+
 ---
 
 ### Vector 3 — Adjacent expansion
