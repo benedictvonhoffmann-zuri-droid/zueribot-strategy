@@ -4,7 +4,7 @@
 >
 > **The fictional setting (per course brief).** Pactly's Internal Tools division. BizDev users wait *weeks* for Legal to review NDAs, killing deal momentum. The agent is a "first-pass" PDF reviewer that answers specific BizDev questions in plain English, with verifiable citations and explicit escalation when uncertain. The Head of Partnerships wants speed; the General Counsel demands safety. The architecture must reconcile both.
 >
-> **v0.2 design revision (2026-05-01).** Dropped the embedding-based Retriever after Phase 1 plumbing validation. The full NDA fits comfortably in Sonnet 4.7's context window; retrieval was solving a problem we did not have. The Planner is preserved with a different job — generating a standard-NDA-clause checklist for the Answer Agent. See *Design revision* below for the full rationale.
+> **Headline architecture (v0.3): Senior Counsel + Analyst + Copywriter.** Each model is matched to the *character* of the work it does. **SaulLM-7B is the Senior Counsel** — plans the clause checklist and critiques the draft for grounding + coverage. **Claude Haiku 4.5 is the Analyst** — fast triage on whether the question is even in scope. **Claude Sonnet 4.7 is the Legal Copywriter** — reads the full NDA and drafts the plain-English answer from the quoted clauses. Plan and critique are *legal-judgement* tasks; drafting from quoted text is a *writing* task. Mapping models to job-character is sharper than a single-model-everywhere split.
 
 ---
 
@@ -12,9 +12,9 @@
 
 - **Agent name:** NDA Helper Agent
 - **Owner:** Senior PM, Pactly Internal Tools division
-- **Spec version:** v0.2 (architecture simplified — see *Design revision*)
+- **Spec version:** v0.3 (role-character mapping — see *Design revision* below)
 - **Last updated:** 2026-05-01
-- **Status:** Phase 1 validated in LangChain (single-LLM PDF reader); Phase 2 (Planner + checklist) in progress.
+- **Status:** Phase 1 + Phase 2 (Haiku-Planner) validated in LangChain. Saul-as-Planner swap planned for Phase 4 alongside Critic wiring.
 
 ---
 
@@ -26,51 +26,57 @@
 
 ---
 
+## The role-character mapping
+
+| Character | Model | Job |
+|---|---|---|
+| **Senior Counsel** | **SaulLM-7B** | Plans the clause checklist (what to look for) **and** critiques the draft (was every checklist item addressed; is every quote anchored verbatim in source). Legal-judgement work. Appears twice in the workflow — same character, two scenes. |
+| **Analyst** | **Claude Haiku 4.5** | Triage gate. Decides whether the question is "first-pass" answerable or out of scope. Cheap, fast — keeps Saul's attention for actual legal work. |
+| **Legal Copywriter** | **Claude Sonnet 4.7** | Reads the full NDA + question + Senior Counsel's checklist; drafts the plain-English answer with verbatim citations. Long-context comprehension and writing skill — defers to Senior Counsel on legal judgement. |
+
+This is the spec's strongest design framing. Each model does what its training and capability are *actually* good at. The deck story writes itself.
+
+---
+
 ## The spec table
 
 | Field | Spec |
 |---|---|
 | **Business Goal** | Reduce BizDev's time-to-first-pass-answer on standard NDAs from weeks (waiting on Legal review) to **<2 minutes for ≥80% of common questions**, without ever shipping a confident-wrong answer. Baseline today: median NDA review wait is multiple weeks; BizDev cannot self-serve any question, however basic. |
-| **Input** | (1) **PDF contract upload** — required, ≤25 MB, text-extractable preferred; OCR fallback for scanned PDFs deferred to a later phase. (2) **Specific natural-language question** — required, English, scope-checked before processing. Invalid input rejected upfront with a useful error message. |
+| **Input** | (1) **PDF contract upload** — required, ≤25 MB, text-extractable preferred; OCR fallback deferred to a later phase. (2) **Specific natural-language question** — required, English, scope-checked before processing. Invalid input rejected upfront with a useful error message. |
 | **Output** | Three-part structured response: **(1)** plain-English answer to the question; **(2)** verbatim quoted clauses from the NDA serving as citations *(with page anchors from the PyPDF page-level loader)*; **(3)** explicit confidence signal — *"Confident / Send to Legal / Cannot answer from this document."* Each citation is a clickable anchor that opens the source PDF at the cited page with the relevant paragraph highlighted — see *HITL-by-UX* below. |
-| **Primary Pattern** | **Pipeline + Critic, with model diversity.** Deterministic flow (Scope → Plan → Answer → Critic), not a free-form hierarchy. The Answer Agent and Critic use **different model families** so the verification is genuinely independent rather than the same model grading itself. *No embedding-based retrieval — the document fits in context. See Design revision.* |
-| **Agent Roles** | See *Agent roles* table below. **Four roles**: Scope Classifier, Planner, Answer Agent, Critic. Each has a defined anti-scope. |
+| **Primary Pattern** | **Pipeline + Critic, with role-character model mapping.** Deterministic flow (Scope → Plan → Answer → Critic), not a free-form hierarchy. The Answer Agent (Sonnet) and Critic (Saul) use **different model families** so the verification is genuinely independent rather than the same model grading itself. *No embedding-based retrieval — the document fits in context.* |
+| **Agent Roles** | See *Agent roles* table below. **Four roles, three model characters**: Analyst (Scope Classifier), Senior Counsel (Planner), Legal Copywriter (Answer Agent), Senior Counsel (Critic). |
 | **Key Steps** | See *Key steps* below. Five high-level steps from upload to delivered answer. |
-| **Governance Gates** | Four layers: pre-input file + scope validation; pre-output critic grounding check; HITL-by-UX visual citation; post-output weekly red-team. See *Governance gates* below. |
+| **Governance Gates** | Four layers: pre-input file + scope validation; pre-output critic grounding + coverage check; HITL-by-UX visual citation; post-output weekly red-team. See *Governance gates* below. |
 | **Success Metric** | **Primary:** correct-answer rate **≥95%** on a Legal-graded eval set. **Counter-metric:** false-confidence rate **≤1%** — the rate at which the agent confidently gives a wrong answer (without escalating). False *escalations* are tolerable; false *confident-wrong* are not. |
 
 ---
 
 ## Agent roles
 
-| Role | Persona / job | Tools | Anti-scope |
-|---|---|---|---|
-| **Scope Classifier** | Step 0. Decides whether the question is "first-pass" answerable or requires Legal. Allowlist: clause existence, term lengths, summary, key obligations. Refuse-list: "should I sign," "negotiate this," "compare to industry standard," "what are the legal risks." | **Claude Haiku 4.5** | Does NOT attempt to answer the question; only routes. |
-| **Planner** | Generates the **standard-NDA-clause checklist** the Answer Agent must verify across the document, *independent of the user's specific question*. The checklist drives **exhaustive coverage** — even a narrow question ("is there a non-compete?") triggers checks for related restraint clauses, IP assignment, residuals, jurisdiction, etc. This is the *missed-clause defence* — exhaustive review rather than question-driven analysis. | **Claude Haiku 4.5** | Does NOT answer the user's question; does NOT decide what's important — produces the standard checklist + question-specific augmentations. |
-| **Answer Agent** | Reads the **full NDA text** + the user's question + the Planner's checklist. Composes a plain-English response, quoting relevant clauses verbatim with page anchors. Outputs the (1) answer + (2) citations + draft (3) confidence signal. | **Claude Sonnet 4.7** | Does NOT make claims unsupported by the document text; does NOT skip checklist items even if the user didn't ask about them — flags omissions if anything material is silent. |
-| **Critic** | Verifies grounding. Checks that every quoted clause exists *verbatim* in the source PDF, that the plain-English answer is logically supported by the quotes, and that **the Planner's checklist was covered** (no silent omissions). **Different model family from the Answer Agent** for independent verification. | **SaulLM-7B** (open-source legal-domain fine-tune) | Does NOT make up evidence to support a flaky answer; does NOT pass an answer it could not verify against the source. |
+| Role | Character | Model | Persona / job | Anti-scope |
+|---|---|---|---|---|
+| **Scope Classifier** | Analyst | **Haiku 4.5** | Step 0. Decides whether the question is "first-pass" answerable or requires Legal. Allowlist: clause existence, term lengths, summary, key obligations. Refuse-list: "should I sign," "negotiate this," "compare to industry standard," "what are the legal risks." | Does NOT attempt to answer the question; only routes. |
+| **Planner** | Senior Counsel | **SaulLM-7B** | Generates a **question-relevant clause checklist** the Answer Agent must verify across the document. Items are *direct* (clauses the question literally asks about) + *adjacent* (clauses that could *affect* the answer — e.g. for a non-compete question, also non-solicitation, restraint of trade, IP assignment, residuals). Drives exhaustive coverage of every dimension that matters for *this specific question*, while keeping the list focused. | Does NOT answer the user's question; does NOT pad with manifestly irrelevant items for the sake of length. |
+| **Answer Agent** | Legal Copywriter | **Sonnet 4.7** | Reads the full NDA text + the user's question + the Senior Counsel's checklist. Reports on *every* checklist item explicitly (Present / Not present / Unclear, with verbatim quote + page anchor where present). Then composes a plain-English synthesis answering the user's question. Long-context (200k tokens — comfortably holds the whole NDA + checklist + question). | Does NOT make claims unsupported by the document text; does NOT skip checklist items even if the user didn't ask about them — silent omission is itself a failure. Defers to Senior Counsel on questions of legal judgement. |
+| **Critic** | Senior Counsel | **SaulLM-7B** | Verifies grounding *and* checklist coverage. Checks that every quoted clause exists *verbatim* in the source PDF, that the plain-English answer is logically supported by the quotes, and that **every checklist item from the Planner was addressed** (no silent omissions). | Does NOT make up evidence to support a flaky answer; does NOT pass an answer it could not verify against the source. |
 
-**Why two different model families.** Asking Claude Sonnet 4.7 to grade Claude Sonnet 4.7 rarely improves quality — same training, same blind spots, same hallucination patterns. Pairing the long-context generalist (Sonnet 4.7) for the Answer Agent with a legal-domain fine-tune (SaulLM-7B) for the Critic produces *genuinely independent* verification. When both models agree the answer is grounded, the confidence is materially higher than self-critique. This is the spec's strongest single design decision.
+**Why Sonnet vs. Saul for Answer vs. Critic.** Asking Claude Sonnet to grade Claude Sonnet rarely improves quality — same training corpus, same blind spots, same hallucination patterns. Pairing the long-context generalist (Sonnet 4.7) for the Answer Agent with a legal-domain fine-tune (SaulLM-7B) for the Critic produces *genuinely independent* verification. When models from two different families agree the answer is grounded, the confidence is materially higher than self-critique.
 
-**Final model lineup.**
-
-| Role | Model | Why |
-|---|---|---|
-| Scope Classifier + Planner | **Claude Haiku 4.5** | Cheap, fast, good enough for classification and checklist generation. Cost-efficient on the high-volume steps. |
-| Answer Agent | **Claude Sonnet 4.7** | Long-context (200k tokens — comfortably holds the whole NDA + checklist + question), strong reasoning, reliable citation behaviour. |
-| Critic | **SaulLM-7B** | Different model family + legal-domain fine-tune = genuinely independent verification. Open-source so it's self-hostable, which keeps the verification path off any single hyperscaler. |
+**Why Saul plays both Planner *and* Critic.** Plan and critique are both *legal-judgement* tasks: what should we look for, and was the look-for done well? A model trained on legal text answers both questions better than a general-purpose model. The two appearances are the same *character* in the workflow — same as a real senior counsel might brief a junior on what to look for, then review their work afterwards. The trade-off: Saul-the-Planner's blind spots in clause identification become Saul-the-Critic's blind spots in coverage verification. We accept that — the alternative (Sonnet-as-Critic) breaks the more important Answer-vs-Critic independence.
 
 ---
 
 ## Key steps
 
-| # | Step | Tool / role | Output | Failure handling |
+| # | Step | Character / Model | Output | Failure handling |
 |---|---|---|---|---|
-| 0 | **Validate + scope-check** | Scope Classifier (Haiku 4.5) | Either "in scope, proceed" or "out of scope, escalate to Legal with reason" | If out of scope, return a polite refusal with one-line reason. |
+| 0 | **Validate + scope-check** | Analyst (Haiku 4.5) | Either "in scope, proceed" or "out of scope, escalate to Legal with reason" | If out of scope, return a polite refusal with one-line reason. |
 | 1 | **Parse PDF** | PyPDF page-level loader | Full document text + per-page metadata (for citation anchors) | If PDF is unparseable / image-only, abort with "this PDF is not readable, please re-upload." OCR fallback deferred. |
-| 2 | **Plan checklist** | Planner (Haiku 4.5) | Standard-NDA-clause checklist + question-specific augmentations | If checklist generation fails, retry once with same model; on second failure abort with escalation. |
-| 3 | **Compose** | Answer Agent (Sonnet 4.7) | Draft answer + verbatim citations with page anchors + initial confidence + checklist coverage report | If the model refuses or returns low-quality output, escalate. |
-| 4 | **Verify** | Critic (SaulLM-7B) | Pass/fail + reason (grounding + checklist coverage) | If fail: route back to Compose with critic feedback (one Reflexion loop max); if still fail, escalate to "Send to Legal" rather than ship. |
+| 2 | **Plan checklist** | Senior Counsel (SaulLM-7B) | Question-relevant clause checklist (direct + adjacent items, JSON) | If checklist generation or JSON parsing fails, retry once; on second failure abort with escalation. *(JSON-reliability mitigation: see Open Questions.)* |
+| 3 | **Compose** | Legal Copywriter (Sonnet 4.7) | Per-checklist-item coverage report + verbatim citations with page anchors + plain-English synthesis + initial confidence | If the model refuses or returns low-quality output, retry once; on second failure escalate. |
+| 4 | **Verify** | Senior Counsel (SaulLM-7B) | Pass/fail + reasons (grounding + coverage) | If fail: route back to Compose with critic feedback (one Reflexion loop max); if still fail, escalate to "Send to Legal" rather than ship. |
 | 5 | **Deliver** | UI rendering layer | Plain-English answer + clickable verbatim citations + confidence label | UI highlights cited paragraphs in the source PDF — see HITL-by-UX. |
 
 ---
@@ -79,12 +85,13 @@
 
 | Tool | Type | Used by | Used for | Cost / latency | Failure mode |
 |---|---|---|---|---|---|
-| PyPDF page-level loader | Library | Step 1 | Extract text + per-page metadata from PDF | Free / <1s for typical NDA | If PDF is image-only, abort (OCR fallback deferred to later phase) |
-| Claude Haiku 4.5 | LLM | Steps 0, 2 | Scope check + checklist generation | $0.001–0.005 / 1–3s | If down, fall back to a Mistral-class small model; if both down, abort |
+| PyPDF page-level loader | Library | Step 1 | Extract text + per-page metadata from PDF | Free / <1s for typical NDA | If PDF is image-only, abort (OCR fallback deferred) |
+| Claude Haiku 4.5 | LLM | Step 0 | Scope check | $0.001–0.005 / 1–3s | If down, fall back to a Mistral-class small model; if both down, abort |
 | Claude Sonnet 4.7 | LLM | Step 3 | Compose answer with citations | $0.05–0.15 / 5–15s | If down, fall back to a Gemini 1.5 Pro / GPT-4 Turbo class model *(emergency only — flag clearly in the eval that a fallback model was used)* |
-| SaulLM-7B | Self-hosted / HF Inference API | Step 4 | Critic / grounding + coverage verification | self-hosted compute / 3–10s | If down, default to "Send to Legal" rather than ship without verification |
+| SaulLM-7B *(Planner)* | Self-hosted / HF Inference API | Step 2 | Generate question-relevant clause checklist | self-hosted compute / 3–10s warm, 30–60s cold | If down, **fall back to Haiku 4.5 as Planner** (validated working in Phase 2) — degrades the Senior Counsel framing but keeps the system shipping. |
+| SaulLM-7B *(Critic)* | Self-hosted / HF Inference API | Step 4 | Critic / grounding + coverage verification | self-hosted compute / 3–10s warm | If down, default to "Send to Legal" rather than ship without verification. **Never ship without Critic.** |
 
-*No embedding model, no vector DB. The full NDA fits in Sonnet's context — see Design revision.*
+*No embedding model, no vector DB. The full NDA fits in Sonnet's context.*
 
 ---
 
@@ -106,11 +113,12 @@
 
 | Failure mode | Likelihood | Severity | Mitigation |
 |---|---|---|---|
-| **Hallucination** — agent claims a clause exists when it doesn't | H | H | Critic verifies every quoted clause is verbatim in source; refuse if not anchored. Different model families for Answer vs Critic = independent verification. |
-| **Missed clause** — agent says "no non-compete" when a buried non-compete exists | M | H | **Planner's standard-NDA checklist** forces exhaustive coverage independent of the user's question. Answer Agent must report on every checklist item, including silent omissions ("no clause found about X"). Critic verifies checklist coverage as part of the grounding check. |
+| **Hallucination** — agent claims a clause exists when it doesn't | H | H | Critic verifies every quoted clause is verbatim in source; refuse if not anchored. Different model families for Answer (Sonnet) vs Critic (Saul) = independent verification. |
+| **Missed clause** — agent says "no non-compete" when a buried non-compete exists | M | H | **Senior Counsel's question-relevant checklist** forces direct + adjacent coverage. Answer Agent must report on every checklist item, including silent omissions ("not present in this document"). Critic verifies checklist coverage. |
 | **Misinterpretation** — correct quote, wrong plain-English explanation | M | M | Critic checks logical consistency between quote and explanation. UI surfaces the quote + visual citation prominently so the user can verify. |
 | **Adversarial PDF** — malformed file, prompt injection ("ignore previous instructions") embedded in NDA text | L | H | Input sanitisation; system-prompt hardening (instructions in PDF text are treated as data, not instructions); refuse if doc shape is clearly off. |
-| **Scope creep** — user asks a non-NDA question or one requiring legal judgement | M | M | Scope Classifier (Step 0) gates this before any document processing. Returns clear refusal with reason. |
+| **Scope creep** — user asks a non-NDA question or one requiring legal judgement | M | M | Analyst (Step 0) gates this before any document processing. Returns clear refusal with reason. |
+| **Saul-Planner / Saul-Critic correlated blind spot** — Senior Counsel misses clause type X in planning, misses absence of X in critique | L | M | Open question; mitigation likely a periodic eval-set sweep that benchmarks Saul against Sonnet on coverage edge cases. Acceptable trade for the verification-independence gain. |
 
 ---
 
@@ -128,11 +136,11 @@
 
 ## Cost & latency budgets
 
-- **Cost target per successful run:** ≤$0.10 (3 LLM calls + parsing — cheaper than v0.1 because no embedding step).
+- **Cost target per successful run:** ≤$0.12 (Haiku scope + Saul plan + Sonnet answer + Saul critique). Slightly higher than v0.2 because Saul fires twice; Saul self-hosted is cheap per call but adds compute.
 - **Cost ceiling per run:** $0.50 (hard cap; aborts and escalates if exceeded).
-- **p50 latency target:** ≤20 seconds end-to-end.
-- **p95 latency target:** ≤60 seconds.
-- **Latency fallback:** if the Critic times out, default to "Send to Legal" rather than ship an unverified answer. Saying *"this needs Legal"* is always a safer outcome than saying *"yes/no"* with no verification.
+- **p50 latency target:** ≤30 seconds end-to-end (assumes Saul warm; cold-start adds 30–60s on the first run after idle).
+- **p95 latency target:** ≤75 seconds.
+- **Latency fallback:** if the Critic times out, default to "Send to Legal" rather than ship an unverified answer. If the Planner times out (Saul cold-start blocking the run), fall back to the Haiku-Planner path validated in Phase 2.
 
 ---
 
@@ -161,18 +169,29 @@ Optional v2: **sample-rate Legal review.** 5% of agent answers reviewed by Legal
 
 ---
 
-## Design revision — why we dropped retrieval (v0.1 → v0.2)
+## Design revision — role-character mapping (v0.2 → v0.3)
 
-The v0.1 spec included an embedding-based Retriever between the Planner and the Answer Agent. After Phase 1 plumbing validation, we dropped it. Four reasons, in order of weight:
+The v0.2 spec used Haiku 4.5 for the Scope Classifier *and* the Planner — a "small fast model for everything cheap" pattern. After Phase 2 validated that the Haiku-driven Planner produced sensible question-relevant checklists, we revisited the model assignments and noticed an architectural mismatch.
 
-1. **Document size fits comfortably in context.** A typical NDA is 2–10 pages (~5–15k tokens). Sonnet 4.7's 200k-token window holds the whole document with room for the question, the system prompt, the checklist, and Sonnet's own reasoning. Phase 1 demonstrated this empirically — full-PDF-in-context produced sharp, well-cited answers with no quality issue. Retrieval was solving a problem we did not have.
-2. **Privacy posture conflicts with persistent embeddings.** The MAC Spec's stateless-by-design commitment means an embedding index built per session would be infrastructure with a session-length lifetime — built, used once, thrown away within seconds. The cost-benefit was always weak; saying so explicitly hardens the privacy story.
-3. **Citation grounding is achievable without retrieval.** Per-page metadata from PyPDF gives Sonnet enough anchor information to cite by page; the Critic verifies the cited text exists verbatim in the same full text the Answer Agent saw. No vector search required.
-4. **Simpler architecture is better defended.** Four roles we deeply understand beats five roles where one is decorative. The deck story is sharper too: *"We removed a component the architecture initially called for once we saw it was infrastructure for an infrastructure problem we didn't have."*
+**The insight:** plan and critique are both *legal-judgement* tasks. Drafting plain-English from quoted clauses is a *writing* task. Triage is a *fast-classification* task. We were using the same model (Haiku) for two of those — not because it was the right tool for both, but because it was the cheap default.
 
-The Planner is preserved — but with a different job. Originally it decomposed the question for retrieval. Now it generates the **standard-NDA-clause checklist** that the Answer Agent must verify across the document, independent of the question. This is the **missed-clause defence** — exhaustive coverage rather than question-driven analysis. A user asking "is there a non-compete?" still gets coverage of related restraint clauses, IP assignment, residuals, jurisdiction. The Critic verifies the checklist was addressed, catching silent omissions.
+**The revision:** map each model to the *character* of the work it does best.
 
-**One scenario that would re-introduce retrieval:** an extraordinarily long NDA (>~150k tokens, ~300+ pages). In that case the architecture re-introduces retrieval as a Phase 2.5 component. Until that case appears in the eval set, the simpler design holds.
+- **SaulLM-7B = Senior Counsel.** Plans the checklist (legal judgement: what clauses matter for this question, including adjacency awareness) AND critiques the draft (legal judgement: was every checklist item addressed; is every quote anchored verbatim). Same character, two scenes — same as a real senior counsel might brief a junior on what to look for, then review the work afterwards.
+- **Haiku 4.5 = Analyst.** Triage on whether the question is even worth Senior Counsel's time (scope check). Cheap, fast, doesn't pretend to do legal judgement.
+- **Sonnet 4.7 = Legal Copywriter.** Reads the full NDA + checklist + question, drafts the plain-English answer with quoted clauses. Has the comprehension and writing chops; defers to Senior Counsel on legal judgement.
+
+**What this revision does *not* change:**
+- Architecture is still Sequential pipeline + Critic-Reflexion (deterministic, not hierarchical).
+- Number of agents (4) and number of handoffs unchanged.
+- Answer-vs-Critic independence preserved (Sonnet ≠ Saul by family — this is the verification independence claim, untouched).
+
+**What it does change:**
+- Saul appears twice (Planner + Critic), introducing a small *internal* correlation: Saul-the-Planner's blind spots in clause identification become Saul-the-Critic's blind spots in coverage verification. We accept this — the alternative (Sonnet-as-Critic) would break the more important Answer-vs-Critic independence.
+- Cost target slightly higher ($0.10 → $0.12) and latency wider ($p95: 60s → 75s) due to Saul firing twice and HF Inference cold-start exposure on the first call.
+- A new fallback path: if Saul's JSON output is unreliable for the Planner role, **invest in structured-output schemas** (e.g. constrained decoding, output validation + retry) rather than reverting to Haiku-Planner — preserving the Senior Counsel framing matters for the architecture.
+
+The deck story is sharper too: *"Each model does what its training and capability are actually good at — Senior Counsel for legal judgement, Analyst for triage, Copywriter for plain-English drafting."*
 
 ---
 
@@ -183,7 +202,8 @@ The Planner is preserved — but with a different job. Originally it decomposed 
 3. **Legal's bandwidth to grade eval cases monthly.** The counter-metric (false-confidence ≤1%) is only as honest as the eval set. If Legal can't grade 50 cases / month, we need to either narrow the eval or fund the time.
 4. **UI rendering of visual citations.** Clickable anchors that highlight the source paragraph require either an embedded PDF viewer with annotation overlay, or a side-by-side rendering. Which one fits Pactly's existing internal-tools tech stack?
 5. **SaulLM-7B hosting.** Self-hosted (Pactly infrastructure) or via the HuggingFace Inference API? Hosting choice affects cost, latency, and the security review.
-6. **Checklist content discipline.** Who owns what's on the standard-NDA-clause checklist? Legal should curate the v1 list (this is exactly the kind of thing the General Counsel would have strong views on); engineering wires it into the Planner prompt. Without curated checklist content, the missed-clause defence is theoretical.
+6. **Checklist content discipline.** Who owns what's on the standard-NDA-clause checklist (and the prompts that generate question-relevant additions)? Legal should curate the v1 anchor list (this is the General Counsel's territory); engineering wires it into the Planner prompt.
+7. **Saul JSON output reliability.** SaulLM is fine-tuned for legal *text*, not structured JSON. **Decision (2026-05-01):** if reliability falls below 95% on the Planner role, *invest in structured-output schemas* (constrained decoding, output validation + retry) rather than revert to Haiku-Planner. Preserving the Senior Counsel framing is worth the engineering cost.
 
 ---
 
@@ -191,5 +211,6 @@ The Planner is preserved — but with a different job. Originally it decomposed 
 
 | Date | Reviewer | Version | What changed |
 |---|---|---|---|
-| 2026-04-29 | Benedict (group lead) + Claude (Opus 4.7) | v0.1 | Initial fill from project brief. Pattern: Pipeline + Critic with model diversity. **Final model lineup: Haiku 4.5 (Scope Classifier + Planner) → Sonnet 4.7 (Answer Agent) → SaulLM-7B (Critic).** Asymmetric reliability target (false-confidence ≤1% is the metric that matters). HITL-by-UX via visual citation. Scope Classifier at step 0. Question-complexity guardrail enforced at scope check. |
-| 2026-05-01 | Benedict (group lead) + Claude (Opus 4.7) | v0.2 | **Architecture simplified after Phase 1 validation.** Dropped the embedding-based Retriever — full NDA fits in Sonnet 4.7's 200k context, retrieval was solving a non-problem. **Five agents → Four agents.** Planner reframed: now generates the standard-NDA-clause checklist (missed-clause defence by exhaustive coverage), no longer decomposes for retrieval. Cost target dropped from $0.20 → $0.10 per run; p50 latency from 30s → 20s. Added *Design revision* section with full rationale. |
+| 2026-04-29 | Benedict (group lead) + Claude (Opus 4.7) | v0.1 | Initial fill from project brief. Pattern: Pipeline + Critic with model diversity. Final model lineup: Haiku 4.5 (Scope Classifier + Planner) → Sonnet 4.7 (Answer Agent) → SaulLM-7B (Critic). Asymmetric reliability target. HITL-by-UX via visual citation. Scope Classifier at step 0. |
+| 2026-05-01 | Benedict (group lead) + Claude (Opus 4.7) | v0.2 | Architecture simplified after Phase 1 validation. Dropped the embedding-based Retriever — full NDA fits in Sonnet 4.7's 200k context. Five agents → four. Planner reframed: now generates the question-relevant clause checklist (direct + adjacent items). Cost target halved ($0.20 → $0.10); latency targets cut. Added *Design revision* section. |
+| 2026-05-01 | Benedict (group lead) + Claude (Opus 4.7) | v0.3 | **Role-character mapping.** Saul promoted from Critic-only to Senior Counsel (Planner + Critic). Haiku stays as Analyst (Scope only). Sonnet remains Legal Copywriter (Answer). Each model now does what its training is actually best at. Deck framing baked into spec. New open question on Saul JSON reliability — decision: invest in output schemas if needed, do not revert to Haiku. Cost target $0.10 → $0.12; p95 latency 60s → 75s. |
