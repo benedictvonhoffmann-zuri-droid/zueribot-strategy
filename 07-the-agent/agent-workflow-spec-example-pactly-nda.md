@@ -12,9 +12,9 @@
 
 - **Agent name:** NDA Helper Agent
 - **Owner:** Senior PM, Pactly Internal Tools division
-- **Spec version:** v0.3 (role-character mapping — see *Design revision* below)
+- **Spec version:** v0.4 (Phase 4 build complete — token economy + research-write split — see *Design revision* below)
 - **Last updated:** 2026-05-01
-- **Status:** Phase 1 + Phase 2 (Haiku-Planner) validated in LangChain. Saul-as-Planner swap planned for Phase 4 alongside Critic wiring.
+- **Status:** Phase 4 working end-to-end. Saul (Senior Counsel) plans + critiques; Haiku (Analyst) scopes + researches; Sonnet (Copywriter) writes. LangGraph orchestrator with conditional routing + reflexion loop wired and tested. Phase 5 (Streamlit demo UI) in progress.
 
 ---
 
@@ -169,6 +169,34 @@ Optional v2: **sample-rate Legal review.** 5% of agent answers reviewed by Legal
 
 ---
 
+## Design revision — Phase 4 build findings (v0.3 → v0.4)
+
+The v0.3 spec was an architectural design. Phase 4 built it and learned five things worth recording — three about Saul-7B's real-world behaviour, two about the architecture's defensive properties.
+
+**1. The Copywriter was doing research, not just writing.** The v0.3 design had Sonnet read the contract, identify clauses, quote them, *and* write the plain-English synthesis. That blurred role-character mapping. We split the work: **Analyst (Haiku) does the research pass — extracting verbatim findings per checklist item with page anchors. Copywriter (Sonnet) writes the answer from already-verified findings only, never reading the contract directly.** The Critic's job becomes mechanical verification of findings (quote exists, checklist covered) instead of comprehension-heavy review of free-form prose. Smaller models can suddenly handle their roles.
+
+**2. Saul-7B's effective context is 4096 tokens.** Hard physical limit, not a prompt-engineering issue. The full contract + system prompt + checklist + findings + output buffer exceeded it on every Critic call. Solution: **the Critic receives only the pages of the contract referenced in findings, plus a compact subset of finding fields**. For a typical NDA this drops the context from ~3500 tokens to ~1500. *Token economy is an architectural design constraint, not a runtime concern.* This is also a generalisable pattern — pass each model what it needs, no more.
+
+**3. Mistral-family models follow user-message instructions much more reliably than system messages.** The chat-completions adapter on HF Inference Providers (Featherless) downweights or merges system roles for Mistral-derived models. The Planner's instructions, when in the system prompt, were effectively invisible to Saul; when moved to the user message, Saul followed them. **Instruction location is architecture, not formatting.**
+
+**4. Don't tell a model what it doesn't have.** v0.3's Planner prompt explained that Saul didn't have access to the contract — and Saul promptly hallucinated contract content anyway. v0.4's Planner prompt **never references a contract or PDF at all.** The task is framed abstractly: "given a question, what clause types should be verified?" Saul has nothing to imagine reading. Hallucinations stopped immediately. *Frame the abstract task; don't draw attention to absence.*
+
+**5. The architecture's defence-in-depth held even when individual agents failed.** Several Phase 4 runs produced bad upstream output (Saul's Planner hallucinated, returned wrong checklists). The system still delivered correct answers because: the Researcher (Haiku) actually read the contract and reported truthfully; the Critic verified findings against the document; the Copywriter wrote only from verified findings. *The Planner was wrong; the system was right.* This is the strongest validation of the multi-stage verification pattern. Production-grade agent systems should be designed with the assumption that any single agent can be wrong, not that all agents are reliable.
+
+**Other v0.4 changes:**
+
+- **LangGraph implemented as the orchestrator** (rather than just named as a target). State is a typed dict; conditional edges route on Scope verdict and Critic verdict; reflexion loop is a max-1-iteration retry from Critic-fail back to Researcher with explicit critic feedback in state.
+- **HuggingFace `InferenceClient` used directly** rather than `langchain-huggingface`'s `HuggingFaceEndpoint` — the new chat-completions provider routing requires it.
+- **No retrieval, no embeddings, no vector store** — confirmed empirically. The full contract fits in Sonnet's context for Researcher and the relevant pages fit in Saul's context for Critic.
+- **Cost target nudged down to ~$0.10 per run** (Haiku for scope + planner-structurer + research, Sonnet for write, Saul for plan + critique — Saul's per-call cost is small).
+- **Critic remained an LLM call** rather than moving to Python verification. Considered the trade-off; kept it because Saul is part of the Senior Counsel framing the deck story rests on, and the token-economy fix made it fit. Python verification stays in the spec as a future fallback if Saul reliability slips.
+
+The deck story for Slide 4 (build process) is sharp:
+
+> *"We learned that domain-fit doesn't substitute for capability ceiling, that token economy is an architectural choice not a runtime concern, that Mistral models follow user-message instructions far more reliably than system messages, and that defence-in-depth in the architecture lets the system be right even when individual agents are wrong. Each of these came from the build, not the design — the spec is sharper now because we shipped."*
+
+---
+
 ## Design revision — role-character mapping (v0.2 → v0.3)
 
 The v0.2 spec used Haiku 4.5 for the Scope Classifier *and* the Planner — a "small fast model for everything cheap" pattern. After Phase 2 validated that the Haiku-driven Planner produced sensible question-relevant checklists, we revisited the model assignments and noticed an architectural mismatch.
@@ -214,3 +242,4 @@ The deck story is sharper too: *"Each model does what its training and capabilit
 | 2026-04-29 | Benedict (group lead) + Claude (Opus 4.7) | v0.1 | Initial fill from project brief. Pattern: Pipeline + Critic with model diversity. Final model lineup: Haiku 4.5 (Scope Classifier + Planner) → Sonnet 4.7 (Answer Agent) → SaulLM-7B (Critic). Asymmetric reliability target. HITL-by-UX via visual citation. Scope Classifier at step 0. |
 | 2026-05-01 | Benedict (group lead) + Claude (Opus 4.7) | v0.2 | Architecture simplified after Phase 1 validation. Dropped the embedding-based Retriever — full NDA fits in Sonnet 4.7's 200k context. Five agents → four. Planner reframed: now generates the question-relevant clause checklist (direct + adjacent items). Cost target halved ($0.20 → $0.10); latency targets cut. Added *Design revision* section. |
 | 2026-05-01 | Benedict (group lead) + Claude (Opus 4.7) | v0.3 | **Role-character mapping.** Saul promoted from Critic-only to Senior Counsel (Planner + Critic). Haiku stays as Analyst (Scope only). Sonnet remains Legal Copywriter (Answer). Each model now does what its training is actually best at. Deck framing baked into spec. New open question on Saul JSON reliability — decision: invest in output schemas if needed, do not revert to Haiku. Cost target $0.10 → $0.12; p95 latency 60s → 75s. |
+| 2026-05-01 | Benedict (group lead) + Claude (Opus 4.7) | v0.4 | **Phase 4 build complete.** Five build findings: research-write split (Copywriter was doing research, separated into Researcher + Writer), token economy as design constraint (Saul-7B's 4k context handled by passing only relevant pages + compact findings to Critic), instruction-location architecture (Mistral-family models follow user-message instructions, not system), abstraction defence (don't tell a model what it doesn't have — frame the abstract task), defence-in-depth confirmed (architecture delivered correct answers even when Planner hallucinated). LangGraph orchestrator implemented. Critic kept as LLM (not moved to Python) — token-economy fix made it fit. Phase 5: "Better Ask Saul" UI on Next.js + assistant-ui + FastAPI backend, themed AMC pop-art style. |
