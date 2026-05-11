@@ -20,18 +20,28 @@
 
 ## Eval taxonomy
 
-Six categories. Most products need at least four. Pick consciously; don't accidentally have only one.
+Ten categories across two axes — **static vs dynamic**.
 
-| Category | What it tests | Typical cadence | Cost / call |
-|---|---|---|---|
-| **Unit eval** | A single LLM call or single agent role hits its pass criteria on a curated set | On-commit (CI) | Low (subset of golden set) |
-| **End-to-end eval** | The whole pipeline produces the right output for realistic scenarios | Pre-release | Medium (full golden set) |
-| **Adversarial / red-team** | Deliberate attempts to break the system (injection, jailbreak, OOD, social engineering) | Scheduled (monthly) + on any system-prompt change | Medium-high (dedicated adversarial set) |
-| **Regression** | Catch quality drops between releases — historical reference run | Pre-release + every model swap | Same as end-to-end |
-| **Production telemetry** | Live behavior (latency, error rates, refusal rates, escalation rates) | Continuous | Free *(in-band metrics)* |
-| **User feedback** | Explicit corrections + implicit signals (abandonment, escalation, re-asking) | Continuous + weekly aggregation | Free at point of capture; cost to process |
+**Static eval** uses a fixed, curated dataset (the golden set). Same inputs every run, same expected outputs. Output: a number you can compare against last week's number. Measures regression.
 
-Each category answers a different question. You can ship without one, but you should know *which one* you're skipping and *why*.
+**Dynamic eval** generates or samples inputs at runtime. Different inputs every run. Output: discovery of failure modes you didn't think to test for.
+
+**A serious eval strategy uses both.** Static is the controlled baseline that lets you measure whether you broke what you promised would work. Dynamic is the exploration frontier that surfaces what you should *add* to the static set so the floor rises over time. Static without dynamic gives you false confidence ("nothing regressed!" — but you only test 50 things). Dynamic without static gives you no baseline ("everything's changing all the time, who knows what's broken").
+
+| # | Category | Static / Dynamic | What it tests | Typical cadence | Cost / call |
+|---|---|---|---|---|---|
+| 1 | **Unit eval** | Static | A single LLM call or agent role hits pass criteria on a curated subset | On-commit (CI) | Low |
+| 2 | **End-to-end eval** | Static | Full pipeline produces the right output for realistic scenarios | Pre-release | Medium |
+| 3 | **Adversarial / red-team (curated set)** | Static | Known attack categories (injection, jailbreak, OOD, social engineering, etc.) | Monthly + on system-prompt changes | Medium |
+| 4 | **Regression** | Static | Catch quality drops between releases against historical baseline | Pre-release + every model swap | Same as end-to-end |
+| 5 | **Production telemetry** | Dynamic | Live behaviour (latency, refusal rate, escalation rate, judge-pass rate) | Continuous | Free |
+| 6 | **User feedback** | Dynamic | Explicit corrections + implicit signals (abandonment, re-asking) | Continuous + weekly aggregation | Free at capture; cost to process |
+| 7 | **Production replay** | Dynamic | Real user queries (PII-scrubbed) re-run on new model/prompt, output compared | Pre-release + on model swap | Medium |
+| 8 | **Continuous random sampling** | Dynamic | LLM-as-judge runs on a random 5-10% of live answers, in near-real-time | Continuous | Low per sample; cumulative |
+| 9 | **Synthetic generation eval** | Dynamic | A generator LLM produces *novel* adversarial inputs on a schedule; results feed back into the curated adversarial set | Monthly | Medium (generation + grading) |
+| 10 | **Property-based eval** | Dynamic | Properties any valid response must have (e.g. "every quoted clause exists verbatim in source"); tested against many novel inputs | Continuous + per-release | Low (rule-checkable) |
+
+You don't need all ten. Most products do well with **4 static (1, 2, 3, 4)** + **3 dynamic (5, 6, 10)**, adding production replay and synthetic generation as the system matures. Property-based eval is criminally underused — when it applies to your domain, it's the cheapest highest-signal eval available.
 
 ---
 
@@ -89,19 +99,40 @@ Typical targets:
 
 ---
 
-## Confidence UX patterns
+## Perceived confidence — making the contract feelable in the UI
 
-How does the system *communicate uncertainty to the user*? This is the eval strategy made user-facing.
+The reliability contract above is a number. **Perceived confidence is whether the user can *feel* that number in the response itself** — in the wording, the layout, the visual treatment, the actions the UI invites. The eval strategy made tangible.
 
-| Pattern | What it looks like | When to use |
+**The principle.** Don't *tell* the user how confident the system is; *show* it through every design dimension of the response. A user who reads a 70%-confidence answer rendered as a definitive paragraph in normal typography will trust it like a 99%-confidence answer — because nothing in the experience tells them not to. The label said "medium confidence"; the design said "fully confident." The design wins.
+
+The goal is **calibrated trust**: users trust high-confidence answers, scrutinise low-confidence ones, and follow escalations without arguing. The only way to get there is to make confidence *felt*, not labelled.
+
+### Six dimensions of perceived confidence
+
+A response can encode confidence through any (ideally several) of these design dimensions. Don't pick one — layer them.
+
+| Dimension | High-confidence response | Low-confidence response |
 |---|---|---|
-| **Tiered confidence** | Visual badge: high / medium / low confidence | Default for any answer system; users build calibrated trust over time |
-| **Refusal at low confidence** | System refuses to answer rather than guess | Mandatory for safety-critical domains (legal, medical, financial) |
-| **Answer-with-caveat** | Answer + explicit "I'm not sure about X" | Right for medium-confidence answers where partial info is useful |
-| **Source citation** | Answer + verifiable links to where it came from | Builds trust via verifiability; the user becomes the final check |
-| **Visual citation (HITL-by-UX)** | Citations are clickable anchors back into the source | Strongest pattern; the user can't trust without seeing the source, the UI makes the source prominent |
+| **Linguistic** | Direct, declarative. *"Yes. The agreement runs 24 months."* | Hedged language baked in. *"From what I can find, this looks like a 24-month term — please double-check section 3."* |
+| **Visual hierarchy** | Clean answer first; citation in tasteful inline form | Answer is *visually demoted* relative to the source; the source is the primary visual element, the answer is below it |
+| **Typography / motion** | Decisive — appears at full speed, full weight, no hedging glyphs | Visibly slower presentation; explicit "thinking" indicator; weight or colour subtly softer |
+| **Source prominence** | Quote presented inline as inline-citation, [Page 4] anchor inline | Source *foregrounded* — the quote appears in a prominent callout box, with the agent's interpretation below as supporting commentary, inviting the user to read the source first |
+| **Iconography / colour accents** | Small green / "verified"-style indicator | Small amber / "review"-style indicator; ideally tied to a tooltip explaining *why* low confidence |
+| **Action affordance** | "Anything else?" — invites a follow-up | "Want me to check with [authority]?" or "Here's the page on zurich.ch for the official answer" — invites verification or escalation |
 
-The confidence UX *is* the contract. If your system surfaces "I'm 95% confident" but is wrong 30% of the time, the UX is broken even if the numbers are technically calibrated.
+### The five patterns these dimensions implement
+
+| Pattern | What it does | When to use |
+|---|---|---|
+| **Tiered confidence indicator** | Small persistent visual cue per answer (badge/colour/icon) | Default; users build a mental model over time of what each tier means |
+| **Refusal at low confidence** | System refuses to answer rather than guess; routes to authority | Mandatory for safety-critical domains (legal, medical, financial); recommended for high-trust contexts |
+| **Answer-with-caveat (linguistic hedging)** | Answer is given, but the *wording* of the answer conveys uncertainty | Medium-confidence; partial info is useful |
+| **Source-foregrounded answer** | The source quote is the primary visual element; the agent's synthesis is supporting | Use whenever confidence is anything less than high — invites verification |
+| **HITL-by-UX (visual citation)** | Citations are clickable anchors back into the source document, highlighted | Strongest pattern; the user can't trust without seeing the source, the UI makes the source prominent |
+
+**The trap to avoid.** Showing a "70% confidence" label below a confidently-phrased paragraph in normal typography is *worse than no label*. Users learn to ignore the label because the design contradicts it. Either commit to the perceived-confidence design across every dimension, or don't display the label at all.
+
+**The contract.** Perceived confidence *is* the reliability contract made user-facing. If the system's eval results say it's right 90% of the time on this query type, and the user feels equally confident in *all* of its answers, the UX has broken the contract — even if the numbers haven't. Calibrating perception is the work.
 
 ---
 

@@ -18,32 +18,64 @@
 
 ## Eval taxonomy — Bünzli scope
 
+Bünzli runs both static and dynamic eval — both are required (static for measuring regression against the controlled baseline; dynamic for discovering failure modes the static set doesn't cover yet).
+
+### Static evals (golden-set-based)
+
 | Category | Bünzli v1 implementation | Status |
 |---|---|---|
 | Unit eval | Per-agent-role pass criteria on a 30-row subset of the golden set, runs in CI | Planned |
 | End-to-end eval | Full 50-row golden set, runs pre-release | Active *(synthetic dataset)* |
-| **Adversarial / red-team** | 15 dedicated adversarial rows across 7 attack categories; runs monthly + on any system-prompt change | Active *(see golden-dataset)* |
+| Adversarial / red-team (curated set) | 15 dedicated adversarial rows across 7 attack categories; runs monthly + on system-prompt changes | Active |
 | Regression | Pre-release + on any model swap; compares against last-known-good baseline | Active |
-| Production telemetry | Latency, refusal rate, escalation rate, judge-pass rate; continuous | Wired (logged to Caddy + LangSmith) |
-| User feedback | "War das richtig?" flag → LLM-as-judge evaluates flag → valid flags add to eval set | **Closed-loop design — Bünzli's signature pattern** |
+
+### Dynamic evals (runtime / production-driven)
+
+| Category | Bünzli v1 implementation | Status |
+|---|---|---|
+| Production telemetry | Latency, refusal rate, escalation rate, judge-pass rate; continuous | Wired (Caddy + LangSmith) |
+| User feedback | "War das richtig?" flag → LLM-as-judge → valid flags add to eval set | **Closed-loop — Bünzli's signature pattern** |
+| Continuous random sampling | 5% of live answers re-graded by judge in near-real-time | Planned for v1 launch + 1 month |
+| Production replay | On any model swap, last 100 production queries (PII-scrubbed) re-run on new model; outputs compared | Planned for first model swap |
+| Synthetic generation eval | Sonnet generates 5-10 *novel* adversarial inputs in Swiss German each month; results scored, valid attacks added to curated adversarial set | Planned for v1 + 3 months |
+| Property-based eval | Every claim cited in a Bünzli response must appear verbatim in the retrieved context; rule-checkable continuously | **Active — automated check on every response, not just eval rows** |
+
+**The discipline:** static evals are the *floor* (have we regressed?). Dynamic evals are the *frontier* (what are we failing on that we never thought to test?). Failures discovered dynamically become rows in the static set — the dataset compounds, the floor rises.
 
 ---
 
 ## Grading mechanism
 
-**Selected: LLM-as-judge (Sonnet 4.7).** With planned hybrid spot-check at open beta.
+**v1: LLM-as-judge (Sonnet 4.7 via API).** **v1 + 3 months: planned migration to Prometheus 2 (8x7B) on rent-a-pod.**
+
+### v1 — Sonnet 4.7 via API
 
 | | Choice |
 |---|---|
 | Judge model | **Claude Sonnet 4.7** |
-| Why this model | Different family from runtime stack (Apertus = Swiss/Mistral lineage; Mistral tools; Sonnet = Anthropic). Strong at multilingual reasoning including Swiss German. Reliability profile well-documented. |
-| Judge cost per call | ~$0.03–0.08 (depends on context length) |
-| Bias mitigations | Use the same judge prompt template across the eval set. Randomize order on side-by-side comparisons. Use explicit pass criteria, not "is this good?" |
+| Why this model at v1 | Different family from runtime stack (Apertus = Swiss/Mistral lineage; Mistral tools; Sonnet = Anthropic). Strong at multilingual reasoning. Operationally simplest — API call, no infra to manage. Right tradeoff for shipping speed. |
+| Judge cost per call | ~$0.03–0.08 |
+| Bias mitigations | Same judge prompt template across the eval set. Randomize order on side-by-side comparisons. Explicit pass criteria, not "is this good?" |
 | Calibration plan | At open beta: 5% of judge decisions reviewed by a Swiss-German-fluent human reviewer. Disagreement rate informs judge-prompt iteration. |
 
-**What we explicitly reject:**
-- **Rule-based as primary** — Bünzli's outputs are free-form Swiss German prose. Rule-based works only for the structured tool-call sections (Züri wie neu JSON schema, ERZ date parsing) and is used *as a complement*, not the primary mechanism.
-- **Human-as-primary** — doesn't scale; no reviewers engaged at v1. Will be the spot-check layer post-launch.
+### v1 + 3 months — Prometheus 2 on rent-a-pod (planned migration)
+
+The decision: at v1 + 3 months, run **Prometheus 2 8x7B on rent-a-pod** (e.g. RunPod A100 80GB, EU/Swiss region preferred) as the judge.
+
+| | Choice |
+|---|---|
+| Judge model | **Prometheus 2 8x7B** *([arxiv 2405.01535](https://arxiv.org/abs/2405.01535))* |
+| Why migrate | (1) **Sovereignty:** closes the only Anthropic dependency in Bünzli's stack — runtime is Mistral-family (Apertus + Ministral); eval becomes Mistral-family too. Full sovereign-AI architecture. (2) **Open-source auditability:** the model judging Bünzli's outputs is itself open and reproducible by external parties — a public reliability claim becomes externally verifiable in a way "we use Anthropic Sonnet" never can. (3) **Cost:** rent-a-pod at ~$1.19/hr × ~15 eval runs/month × 10-15 min per run ≈ ~$3-5/month, vs. ~$25-40/month for Sonnet at the same volume. |
+| Judging Swiss German artifacts | **Eval rubric phrased in English; artifacts being judged are Swiss German.** Judge needs semantic-equivalence recognition, not Swiss German fluency. This was Prometheus's biggest perceived weakness; the English-rubric framing largely neutralises it. |
+| Operational shape | Pod orchestration script: spin up → load weights (cached on persistent volume) → run eval → shut down. ~10-15 min end-to-end per full eval. |
+| Migration validation | Run Prometheus 2 in side-by-side with Sonnet on the full 50-row golden set for one release. Migrate if Prometheus agrees with Sonnet at ≥95%, or if disagreements (on human review) favour Prometheus. |
+| Cost target | ~$5/month at planned eval volume *(vs. ~$25-40 on Sonnet)* — meaningful savings that compound as eval volume grows. |
+
+### What we explicitly reject
+
+- **Rule-based as primary** — Bünzli's outputs are free-form Swiss German prose. Rule-based works only for the structured tool-call sections (Züri wie neu JSON schema, ERZ date parsing) and as a complement to the LLM judge, not as the primary mechanism. *(Note: property-based eval — "every quoted claim appears verbatim in retrieved context" — is rule-based and runs continuously alongside the LLM judge.)*
+- **Human-as-primary** — doesn't scale; no reviewers engaged at v1. Spot-check layer at open beta only.
+- **Reward model as judge** (e.g. Nemotron-340B-Reward) — wrong shape: reward models predict *human preference* (which can favour confident wrong answers), not *correctness*. Plus the size is incompatible with Bünzli's cost envelope.
 
 ---
 
@@ -111,16 +143,29 @@ These are v1 targets, calibrated for a free civic-AI product where the consequen
 
 ---
 
-## Confidence UX — Bünzli
+## Perceived confidence — Bünzli's design
 
-| Confidence level | UX | Example |
-|---|---|---|
-| **High (>90%)** | Direct answer + verbatim quote with [Page X] anchor | *"Ja, d'Bioabfuhr in dim Quartier isch jede Mittwuch."* |
-| **Medium (70–90%)** | Answer + explicit hedge | *"Soviel ich gseh, isch d'Bioabfuhr am Mittwuch — aber bestätig das au no bi de Stadt direkt."* |
-| **Low (<70%)** | Refuse + self-escalate | *"Da bin ich mer nöd sicher gnueg. Schreib direkt am ERZ unter erz.ch oder rüef 044 645 75 75."* |
-| **Out-of-scope (handled at scope-classifier)** | Polite refusal with route | *"Das isch e Rächtsfrog — ich chan dir do nöd helfen. Hesch en Aawalt im Sinn?"* |
+The principle from the template: *don't tell the user the confidence; make them feel it through every dimension of the response design.* For Bünzli this is especially important because the user base (Zürich residents asking civic questions) needs to build calibrated trust in *which* of Bünzli's answers can be relied on and *which* should be double-checked with the city. The Swiss civic-trust context is high; the consequence of betraying it is brand-existential.
 
-The HITL-by-UX pattern (page-anchored citations clickable back into source) is the trust foundation; the confidence tiers tell the user *when to bother looking at the citation*.
+### How each confidence tier is *felt*, not just labelled
+
+| Tier | Linguistic *(Züritüütsch)* | Visual hierarchy | Iconography | Source treatment | Action affordance |
+|---|---|---|---|---|---|
+| **High (>90%)** | *"Saul sagt: D'Bioabfuhr in dim Quartier isch jede Mittwuch."* — direct, declarative, no hedging | Answer is the dominant visual element; source inline with subtle [Quelle] anchor | Small green "✓ überprüäft" badge (verified-style) | Inline link — *"Quelle: ERZ"* — confidence in source is implicit | *"Es no öppis?"* — invites the next question |
+| **Medium (70–90%)** | *"Saul gloubt: D'Bioabfuhr söt am Mittwuch sii — bestätig das aber au no bi de Stadt direkt."* — explicit hedge baked into the *wording* | Source quote *foregrounded* in a callout box ABOVE the answer; the answer is supporting commentary | Small amber "ℹ️ luegisch's nomal aa" badge | Source quote prominently displayed; the user sees the evidence first, then Bünzli's interpretation | *"Wottsch mer das vo ERZ bestätige?"* — explicit link to ERZ canonical source |
+| **Low (<70%)** | *"Saul isch sich nöd sicher gnueg. Bessere ruefisch direkt am ERZ aa under 044 645 75 75."* | Bünzli's draft answer is *de-emphasized* or hidden by default behind a "show what Saul thought" expand — the official route is what the user sees first | Red "→ frög lieber d'Stadt direkt" badge | The route to authority is the primary visual element; Bünzli's tentative answer is secondary | Phone number + link to authority page surfaced as primary action |
+| **Out-of-scope** *(handled at scope classifier — no Bünzli answer at all)* | *"Das isch e Rächtsfrog — ich chan dir do nöd helfen. Hesch en Aawalt im Sinn? D'Mieterverband Züri isch unter mv-zh.ch erreichbar."* | No answer; refusal explanation is the only content | Red "→ Aawalt nötig" badge | n/a | Specific authority + route provided ("don't ask me, ask this real person") |
+
+### The Zürich-specific design choices
+
+- **"Saul sagt / Saul gloubt / Saul isch sich nöd sicher"** is the canonical opening triplet. It teaches users in three exposures what to expect: when Saul *sagt*, trust it; when Saul *gloubt*, verify; when Saul *isch sich nöd sicher*, don't bother with Saul, ask the authority.
+- **Source-foregrounded for anything below high confidence** — for civic content, the official source (ERZ, Stadt Zürich, ZVV) carries far more authority than Saul. When confidence drops, get out of the way and put the source first.
+- **Authority phone number as the action affordance for low confidence** — Zürich civic infrastructure is reachable. 044 645 75 75 (ERZ) isn't an abstraction; it's a real number a Zürich resident can call. Surfacing it as the action is the right design move.
+- **No fake confidence theatre** — Bünzli should *never* present a 70% answer with the same visual confidence as a 95% answer. If the design and the label say different things, the design wins, and we've broken the contract.
+
+### The HITL-by-UX foundation
+
+Underneath all of this: page-anchored citations clickable back into the source document. **The user can never fully trust Saul without seeing the source — and the UI makes the source one click away in every response above out-of-scope.** That structural feature is what makes the perceived-confidence design honest. Without it, hedging is just decoration.
 
 ---
 
@@ -161,3 +206,4 @@ The HITL-by-UX pattern (page-anchored citations clickable back into source) is t
 | Date | Reviewer | What changed |
 |---|---|---|
 | 2026-05-02 | Benedict + Claude (Opus 4.7) | Initial fill. LLM-as-judge (Sonnet 4.7) chosen explicitly because it lives outside the runtime stack. Closed-loop user-flag → judge → eval-set design captured as Bünzli's signature pattern. v1 targets calibrated for free civic product (≥90% correct, ≤2% hallucination, 100% adversarial). HITL spot-check deferred to open beta. |
+| 2026-05-02 | Benedict + Claude (Opus 4.7) | **Three substantive additions:** (1) **Dynamic eval added as a first-class concern** — taxonomy split into static (4 categories) + dynamic (6 categories) with explicit "static = floor; dynamic = frontier" framing. Property-based eval flagged as Bünzli's continuous grounding check on every response. (2) **Prometheus 2 on rent-a-pod planned for v1 + 3 months migration** — closes the only Anthropic dependency in the stack; ~$5/mo vs ~$25-40/mo for Sonnet; English rubric / Swiss German artifact framing neutralises the multilingual concern. Reward models (Nemotron) explicitly rejected as judge — wrong shape. (3) **Perceived-confidence design** rewritten as the core principle: don't tell, *show*. Six design dimensions × three confidence tiers in Züritüütsch with concrete copy. "Saul sagt / gloubt / isch sich nöd sicher" as the canonical trust-calibration vocabulary. |
